@@ -28,10 +28,16 @@ asio_example_LDFLAGS = \
 endif
 
 if WANT_SDBUSPP
-noinst_PROGRAMS += calculator-server
+noinst_PROGRAMS += calculator-server calculator-client
 calculator_server_generated_files = \
 	net/poettering/Calculator/server.hpp \
 	net/poettering/Calculator/server.cpp \
+	net/poettering/Calculator/error.hpp \
+	net/poettering/Calculator/error.cpp
+
+calculator_client_generated_files = \
+	net/poettering/Calculator/client.hpp \
+	net/poettering/Calculator/client.cpp \
 	net/poettering/Calculator/error.hpp \
 	net/poettering/Calculator/error.cpp
 
@@ -43,11 +49,18 @@ calculator_server_SOURCES = \
 calculator_server_CXXFLAGS = $(SYSTEMD_CFLAGS) -I$(top_srcdir)
 calculator_server_LDADD = $(SYSTEMD_LIBS) ../libsdbusplus.la
 
+calculator_client_SOURCES = \
+	calculator-client.cpp $(calculator_client_generated_files)
+calculator_client_CXXFLAGS = $(SYSTEMD_CFLAGS) -I$(top_srcdir)
+calculator_client_LDADD = $(SYSTEMD_LIBS) ../libsdbusplus.la
+
 BUILT_SOURCES = \
 	$(calculator_server_generated_files) \
+	$(calculator_client_generated_files) \
 	$(calculator_markdown_generated_files)
 CLEANFILES = \
 	$(calculator_server_generated_files) \
+	$(calculator_client_generated_files) \
 	$(calculator_markdown_generated_files)
 
 net/poettering/Calculator/server.hpp:
@@ -61,6 +74,18 @@ net/poettering/Calculator/server.cpp:
 	@top_srcdir@/tools/sdbus++ \
 	    -r $(srcdir) -t $(top_builddir)/tools/sdbusplus/templates \
 	    interface server-cpp net.poettering.Calculator > $@
+
+net/poettering/Calculator/client.hpp:
+	@mkdir -p $(@D)
+	@top_srcdir@/tools/sdbus++ \
+	    -r $(srcdir) -t $(top_builddir)/tools/sdbusplus/templates \
+	    interface client-header net.poettering.Calculator > $@
+
+net/poettering/Calculator/client.cpp:
+	@mkdir -p $(@D)
+	@top_srcdir@/tools/sdbus++ \
+	    -r $(srcdir) -t $(top_builddir)/tools/sdbusplus/templates \
+	    interface client-cpp net.poettering.Calculator > $@
 
 net/poettering/Calculator/error.hpp:
 	@mkdir -p $(@D)

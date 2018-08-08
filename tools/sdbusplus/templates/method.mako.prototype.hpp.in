@@ -75,9 +75,9 @@
 
 %>
 ###
-### Emit 'header'
+### Emit 'server-header'
 ###
-    % if ptype == 'header':
+    % if ptype == 'server-header':
         /** @brief Implementation for ${ method.name }
          *  ${ method.description.strip() }
     % if len(method.parameters) != 0:
@@ -97,6 +97,27 @@
         virtual ${cpp_return_type()} ${ method.camelCase }(
             ${ parameters() }) = 0;
 ###
+### Emit 'client-header'
+###
+    % elif ptype == 'client-header':
+        /** ${ method.description.strip() }
+    % if len(method.parameters) != 0:
+         *
+        % for p in method.parameters:
+         *  @param[in] ${p.camelCase} - ${p.description.strip()}
+        % endfor
+    % endif
+    % if len(method.returns) != 0:
+         *
+        % for r in method.returns:
+         *  @return ${r.camelCase}[${r.cppTypeParam(interface.name)}] \
+- ${r.description.strip()}
+        % endfor
+    % endif
+         */
+        ${cpp_return_type()} ${method.camelCase}(
+            ${parameters()});
+###
 ### Emit 'callback-header'
 ###
     % elif ptype == 'callback-header':
@@ -114,6 +135,32 @@
                    details::${interface_name()}::_return_${ method.CamelCase }
                         .data(),
                    _callback_${ method.CamelCase }),
+###
+### Emit 'client-cpp'
+###
+    % elif ptype == 'client-cpp':
+${cpp_return_type()} ${interface_name()}::${method.camelCase}(
+        ${parameters()})
+{
+    auto m = _bus->new_method_call(_service, _path, _interface, "${method.name}");
+    % if len(method.parameters) != 0:
+    m.append(${parameters_as_list()});
+    % endif
+    auto reply = _bus->call(m);
+    // TODO, need a set of exceptions that mirror the yaml errors. This will require parsing the error
+    // name. Search sd_bus_error in sd-bus.h for a start. This should be able to throw smarter exceptions
+    // in these error cases.
+    if (reply.is_method_error()) {
+        throw std::runtime_error("Dbus call method error");
+    }
+
+    % if len(method.returns) != 0:
+    ${cpp_return_type()} ret;
+    reply.read(ret);
+    return ret;
+    % endif
+}
+
 ###
 ### Emit 'callback-cpp'
 ###

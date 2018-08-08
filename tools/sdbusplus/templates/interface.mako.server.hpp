@@ -71,9 +71,8 @@ class ${classname}
 
     % endif
     % for m in interface.methods:
-${ m.cpp_prototype(loader, interface=interface, ptype='header') }
+${ m.cpp_prototype(loader, interface=interface, ptype='server-header') }
     % endfor
-
     % for s in interface.signals:
 ${ s.cpp_prototype(loader, interface=interface, ptype='header') }
     % endfor

@@ -106,6 +106,9 @@
         % for p in method.parameters:
          *  @param[in] ${p.camelCase} - ${p.description.strip()}
         % endfor
+        % for e in method.errors:
+         *  @throws sdbusplus::${error_namespace(e)}::${error_name(e)}
+        % endfor
     % endif
     % if len(method.returns) != 0:
          *

@@ -20,6 +20,9 @@
         l.pop() # Remove "Error"
         return '/'.join(l) + '/error.hpp';
 %>
+###
+### Emit 'callback-cpp'
+###
 % if ptype == 'callback-cpp':
 auto ${classname}::${property.camelCase}() const ->
         ${property.cppTypeParam(interface.name)}
@@ -139,6 +142,75 @@ static const auto _property_${property.name} =
             ${property.cppTypeMessage(interface.name)}>());
 }
 }
+###
+### Emit 'client-headers'
+###
+% elif ptype == 'client-headers':
+        /** Get value of ${property.name}
+    % for e in property.errors:
+         *  @throws sdbusplus::${error_namespace(e)}::${error_name(e)}
+    % endfor
+         *  @return - ${property.name} property.
+         */
+        ${property.cppTypeParam(interface.name)} ${property.camelCase}() const;
+
+% if 'const' not in property.flags:
+        /** Set value of ${property.name}
+         *  @param[in] ${property.name} - Property vaue.
+    % for e in property.errors:
+         *  @throws sdbusplus::${error_namespace(e)}::${error_name(e)}
+    % endfor
+         */
+        void ${property.camelCase}(${property.cppTypeParam(interface.name)} var) const;
+% endif
+###
+### Emit 'client-cpps'
+###
+% elif ptype == 'client-cpps':
+% if property.is_enum():
+${classname}::${property.cppTypeParam(interface.name)} ${classname}::${property.camelCase}() const
+% else:
+${property.cppTypeParam(interface.name)} ${classname}::${property.camelCase}() const
+% endif
+{
+### // TODO: do this better, don't like the string literals.
+### // Also would rather have a common function for get and set, but that would require
+### // a variant type including class enums which has other repercussions.
+    auto m = _bus->new_method_call(_service, _path, "org.freedesktop.DBus.Properties", "Get");
+    m.append(_interface, "${property.name}");
+    auto reply = _bus->call(m);
+    if (reply.is_method_error()) {
+        throw std::runtime_error("${classname}::${property.camelCase}() get message returned error.");
+    }
+
+    PropertiesVariant ret;
+    reply.read(ret);
+% if property.is_enum():
+    return ${classname}::convert${property.enum_name(interface.name)}FromString(ret.get<std::string>());
+% else:
+    return ret.get<${property.cppTypeParam(interface.name)}>();
+% endif
+}
+
+% if 'const' not in property.flags:
+void ${classname}::${property.camelCase}(${property.cppTypeParam(interface.name)} var) const
+{
+### // TODO: do this better, don't like the string literals.
+    auto m = _bus->new_method_call(_service, _path, "org.freedesktop.DBus.Properties", "Set");
+    % if property.is_enum():
+    m.append(_interface, "${property.name}", convertForMessage(var));
+    % else:
+    m.append(_interface, "${property.name}", var);
+    % endif
+    auto reply = _bus->call(m);
+    if (reply.is_method_error()) {
+        throw std::runtime_error("${classname}::${property.camelCase}() set message returned error.");
+    }
+}
+% endif
+###
+### Emit 'callback-cpp-includes'
+###
 % elif ptype == 'callback-cpp-includes':
         % for e in property.errors:
 #include <${error_include(e)}>

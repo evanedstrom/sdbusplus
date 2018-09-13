@@ -5,8 +5,9 @@
     classname = namespaces.pop()
 
     def setOfPropertyTypes():
-        return set(p.cppTypeParam(interface.name) for p in
-                interface.properties);
+        return set("std::string" if p.is_enum()
+                else p.cppTypeParam(interface.name)
+                for p in interface.properties);
 %>
 namespace sdbusplus
 {
@@ -23,25 +24,79 @@ class ${classname}
         virtual ~${classname}() = default;
 
         /** @brief Constructor to connect to default bus.
-         * @param[in] service - Service name of dbus server service.
-         * @param[in] path - Dbus path location of server service.
+         *  @param[in] service - Service name of dbus server service.
+         *  @param[in] path - Dbus path location of server service.
          */
         ${classname}(const char* service, const char* path);
 
+###     // TODO: Split into some kind of common class?
+        % for e in interface.enums:
+        enum class ${e.name}
+        {
+            % for v in e.values:
+            ${v.name},
+            % endfor
+        };
+        % endfor
+
+        % if interface.properties:
+        using PropertiesVariant = sdbusplus::message::variant<
+                ${",\n                ".join(setOfPropertyTypes())}>;
+
+        /** @brief Constructor to initialize the object from a map of
+         *         properties.
+         *
+         *  @param[in] bus - Bus to attach to.
+         *  @param[in] path - Path to attach at.
+         *  @param[in] vals - Map of property name to value for initialization.
+         */
+        ${classname}(bus::bus& bus, const char* path,
+                     const std::map<std::string, PropertiesVariant>& vals,
+                     bool skipSignal = false);
+    % endif
+###
+### Methods
+###
     % for m in interface.methods:
-${ m.cpp_prototype(loader, interface=interface, ptype='client-header') }
+        ${ m.cpp_prototype(loader, interface=interface, ptype='client-header') }
     % endfor
+###
+### Properties
+###
+    % for p in interface.properties:
+        ${ p.cpp_prototype(loader, interface=interface, ptype='client-headers') }
+    % endfor
+###
+### Signals
+###
+        // TODO: Signals
 
-    // TODO: Signals
-
-    // TODO: Properties
 
     private:
+        // Members
         std::shared_ptr<bus::bus> _bus;
         static constexpr auto _interface = "${interface.name}";
         const char* _service;
         const char* _path;
+
+        // Enum helpers
+    % for e in interface.enums:
+        static ${e.name} convert${e.name}FromString(const std::string& s);
+    % endfor
 };
+
+    % for e in interface.enums:
+/* Specialization of sdbusplus::client::bindings::details::convertForMessage
+ * for enum-type ${classname}::${e.name}.
+ *
+ * This converts from the enum to a constant c-string representing the enum.
+ *
+ * @param[in] e - Enum value to convert.
+ * @return C-string representing the name for the enum value.
+ */
+std::string convertForMessage(${classname}::${e.name} e);
+    % endfor
+
 
 } // namespace client
     % for s in reversed(namespaces):

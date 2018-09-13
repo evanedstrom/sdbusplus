@@ -18,6 +18,7 @@ struct Calculator : Calculator_inherit
     /** Multiply (x*y), update lastResult */
     int64_t multiply(int64_t x, int64_t y) override
     {
+        status(State::Success);
         return lastResult(x * y);
     }
 
@@ -34,6 +35,7 @@ struct Calculator : Calculator_inherit
             throw DivisionByZero();
         }
 
+        status(State::Success);
         return lastResult(x / y);
     }
 
@@ -42,6 +44,7 @@ struct Calculator : Calculator_inherit
     {
         auto v = lastResult();
         lastResult(0);
+        status(State::Success);
         cleared(v);
         return;
     }

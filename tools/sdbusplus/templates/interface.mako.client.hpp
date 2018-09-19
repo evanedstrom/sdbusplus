@@ -29,6 +29,16 @@ class ${classname}
          */
         ${classname}(const char* service, const char* path);
 
+        /** @brief Constructor to connect to provided bus.
+         *  This is helpful for signal monitoring, as access to the bus
+         *  object is needed to implement an event loop.
+         *
+         *  @param[in] bus - Bus to attach to.
+         *  @param[in] service - Service name of dbus server service.
+         *  @param[in] path - Dbus path location of server service.
+         */
+        ${classname}(std::shared_ptr<bus::bus> bus, const char* service, const char* path);
+
 ###     // TODO: Split into some kind of common class?
         % for e in interface.enums:
         enum class ${e.name}
@@ -69,8 +79,9 @@ class ${classname}
 ###
 ### Signals
 ###
-        // TODO: Signals
-
+    % for s in interface.signals:
+        ${ s.cpp_prototype(loader, interface=interface, ptype='client-headers') }
+    % endfor
 
     private:
         // Members

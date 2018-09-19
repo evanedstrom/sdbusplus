@@ -22,6 +22,13 @@ ${classname}::${classname}(const char* service, const char* path)
 {
 }
 
+${classname}::${classname}(std::shared_ptr<bus::bus> bus, const char* service, const char* path)
+        : _bus(bus),
+          _service(service),
+          _path(path)
+{
+}
+
 ###
 ### Methods
 ###
@@ -39,10 +46,11 @@ ${ p.cpp_prototype(loader, interface=interface, ptype='client-cpps') }
 ###
 ### Signals
 ###
-    // TODO: Signals
+    % for s in interface.signals:
+${ s.cpp_prototype(loader, interface=interface, ptype='client-cpps') }
+    % endfor
 
     % for e in interface.enums:
-
 namespace
 {
 /** String to enum mapping for ${classname}::${e.name} */

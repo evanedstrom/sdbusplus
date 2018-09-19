@@ -78,4 +78,40 @@ static const auto _signal_${ signal.CamelCase } =
     % endif
 }
 }
+###
+### Emit 'client-headers'
+###
+    % elif ptype == 'client-headers':
+        /** Subscribe to ${signal.CamelCase}
+         *  @return - 0 on success, negative if failed.
+         */
+        int subscribe${signal.CamelCase}();
+
+        /** Unsubscribe to ${signal.CamelCase}
+         *  @return - 0 on success, negative if failed.
+         */
+        int unsubscribe${signal.CamelCase}();
+###
+### Emit 'client-cpps'
+###
+    % elif ptype == 'client-cpps':
+int ${interface_name()}::subscribe${signal.CamelCase}()
+{
+    auto m = _bus->new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "AddMatch");
+    m.append(std::string("sender='") + _interface + "',type='signal',member='${signal.name}'");
+    auto reply = _bus->call(m);
+    if (reply.is_method_error())
+        return -1;
+    return 0;
+}
+
+int ${interface_name()}::unsubscribe${signal.CamelCase}()
+{
+    auto m = _bus->new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "RemoveMatch");
+    m.append(std::string("sender='") + _interface + "',type='signal',member='${signal.name}'");
+    auto reply = _bus->call(m);
+    if (reply.is_method_error())
+        return -1;
+    return 0;
+}
     % endif

@@ -73,6 +73,12 @@
                  p.enum_name(interface.name),
                  p.camelCase)
 
+    def enum_convert_for_message(p):
+        if not p.is_enum():
+            return p.camelCase
+        else:
+            return "convertForMessage(%s)" % p.camelCase
+
 %>
 ###
 ### Emit 'server-header'
@@ -147,7 +153,7 @@ ${cpp_return_type()} ${interface_name()}::${method.camelCase}(
 {
     auto m = _bus->new_method_call(_service, _path, _interface, "${method.name}");
     % if len(method.parameters) != 0:
-    m.append(${parameters_as_list()});
+    m.append(${parameters_as_list(transform=enum_convert_for_message)});
     % endif
     auto reply = _bus->call(m);
     // TODO, need a set of exceptions that mirror the yaml errors. This will require parsing the error

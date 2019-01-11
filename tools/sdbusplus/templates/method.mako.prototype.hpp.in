@@ -163,10 +163,28 @@ ${cpp_return_type()} ${interface_name()}::${method.camelCase}(
         throw std::runtime_error("Dbus call method error");
     }
 
-    % if len(method.returns) != 0:
-    ${cpp_return_type()} ret;
-    reply.read(ret);
-    return ret;
+    % for ret in method.returns:
+    ${ret.cppTypeParam(interface.name)} _${ret.name};
+    % endfor
+
+    % if len(method.returns) > 0:
+    reply.read(
+        % for ret in method.returns[:-1]:
+        _${ret.name},
+        % endfor
+        _${method.returns[-1].name}
+    );
+    % endif
+
+    % if len(method.returns) == 1:
+    return _${method.returns[0].name};
+    % elif len(method.returns) > 1:
+    return std::make_tuple(
+        % for ret in method.returns[:-1]:
+        _${ret.name},
+        % endfor
+        _${method.returns[-1].name}
+    );
     % endif
 }
 

@@ -1,12 +1,12 @@
 <%
-    def cpp_return_type():
+    def cpp_return_type(server=True, class_context=True):
         if len(method.returns) == 0:
             return "void"
         elif len(method.returns) == 1:
-            return method.returns[0].cppTypeParam(interface.name)
+            return method.returns[0].cppTypeParam(interface.name, server, class_context)
         else:
             return "std::tuple<" + \
-                   returns_as_list() + \
+                   returns_as_list(True, server, class_context) + \
                    ">"
 
     def parameters(defaultValue=False):
@@ -31,9 +31,9 @@
             r += default_value(p)
         return r
 
-    def returns_as_list(as_param=True):
-        return ", ".join([ (r.cppTypeParam(interface.name) if as_param else
-                r.cppTypeMessage(interface.name)) for r in method.returns ])
+    def returns_as_list(as_param=True, server=True, class_context=True):
+        return ", ".join([ (r.cppTypeParam(interface_name(), server, class_context) if as_param else
+                r.cppTypeMessage(interface_name())) for r in method.returns ])
 
     def returns_as_tuple_index(tuple, pre="", post=""):
         return ", ".join([ "%sstd::move(std::get<%d>(%s))%s" %\
@@ -64,20 +64,20 @@
         l.pop() # Remove "Error"
         return '/'.join(l) + '/error.hpp';
 
-    def enum_convert(p):
+    def enum_convert(p, name_prefix=""):
         if not p.is_enum():
-            return p.camelCase
+            return (str(name_prefix) + p.camelCase)
         else:
             return "%sconvert%sFromString(%s)" % \
                 (p.enum_namespace(interface.name),
                  p.enum_name(interface.name),
-                 p.camelCase)
+                 (str(name_prefix) + p.camelCase))
 
-    def enum_convert_for_message(p):
+    def enum_convert_for_message(p, name_prefix=""):
         if not p.is_enum():
-            return p.camelCase
+            return (str(name_prefix) + p.camelCase)
         else:
-            return "convertForMessage(%s)" % p.camelCase
+            return "convertForMessage(%s%s)" % (str(name_prefix), p.camelCase)
 
 %>
 ###
@@ -124,7 +124,7 @@
         % endfor
     % endif
          */
-        ${cpp_return_type()} ${method.camelCase}(
+        ${cpp_return_type(True)} ${method.camelCase}(
             ${parameters()});
 ###
 ### Emit 'callback-header'
@@ -148,7 +148,7 @@
 ### Emit 'client-cpp'
 ###
     % elif ptype == 'client-cpp':
-${cpp_return_type()} ${interface_name()}::${method.camelCase}(
+${cpp_return_type(False, False)} ${interface_name()}::${method.camelCase}(
         ${parameters()})
 {
     auto m = _bus->new_method_call(_service, _path, _interface, "${method.name}");
@@ -164,26 +164,26 @@ ${cpp_return_type()} ${interface_name()}::${method.camelCase}(
     }
 
     % for ret in method.returns:
-    ${ret.cppTypeParam(interface.name)} _${ret.name};
+    ${ret.cppTypeMessage(interface.name)} _${ret.camelCase};
     % endfor
 
     % if len(method.returns) > 0:
     reply.read(
         % for ret in method.returns[:-1]:
-        _${ret.name},
+        _${ret.camelCase},
         % endfor
-        _${method.returns[-1].name}
+        _${method.returns[-1].camelCase}
     );
     % endif
 
     % if len(method.returns) == 1:
-    return _${method.returns[0].name};
+    return _${method.returns[0].camelCase};
     % elif len(method.returns) > 1:
     return std::make_tuple(
         % for ret in method.returns[:-1]:
-        _${ret.name},
+        ${enum_convert(ret, "_")},
         % endfor
-        _${method.returns[-1].name}
+        ${enum_convert(method.returns[-1], "_")}
     );
     % endif
 }

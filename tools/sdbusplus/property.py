@@ -21,16 +21,20 @@ class Property(NamedElement, Renderer):
         return False
 
     """ Return a conversion of the cppTypeName valid as a function parameter.
-        Currently only 'enum' requires conversion.
+        Currently only 'enum' requires conversion. If class_context is false,
+        interface will be prepended to enum types (i.e. classname::enumtype)
     """
-    def cppTypeParam(self, interface, server=True):
+    def cppTypeParam(self, interface, server=True, class_context=True):
         if self.is_enum():
             # strip off 'enum<' and '>'
             r = self.cppTypeName.split('>')[0].split('<')[1]
 
             # self. means local type.
             if r.startswith("self."):
-                return r.split('self.')[1]
+                name = r.split('self.')[1]
+                if not class_context:
+                    return interface + "::" + name
+                return name
 
             r = r.split('.')
             r.insert(-2, "server" if server else "client")
